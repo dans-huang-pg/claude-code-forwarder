@@ -117,11 +117,26 @@ echo "  3. Click ${BOLD}Load unpacked${NC}"
 echo "  4. Select: ${SCRIPT_DIR}/extension"
 echo ""
 
-# Try to open Chrome extensions page
-open "chrome://extensions" 2>/dev/null || \
-open -a "Google Chrome" "chrome://extensions" 2>/dev/null || \
-open -a "Arc" "chrome://extensions" 2>/dev/null || \
-echo "  Open chrome://extensions manually in your browser"
+# Open extensions page in default browser (must be Chromium-based)
+DEFAULT_BROWSER=$(defaults read com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers 2>/dev/null | \
+    grep -B1 'https' | grep -o '"[^"]*"' | head -1 | tr -d '"' || true)
+
+case "$DEFAULT_BROWSER" in
+    com.google.chrome*)   BROWSER_APP="Google Chrome" ;;
+    company.thebrowser.*) BROWSER_APP="Arc" ;;
+    com.brave.browser*)   BROWSER_APP="Brave Browser" ;;
+    com.microsoft.edge*)  BROWSER_APP="Microsoft Edge" ;;
+    com.vivaldi.vivaldi*) BROWSER_APP="Vivaldi" ;;
+    *)                    BROWSER_APP="" ;;
+esac
+
+if [ -n "$BROWSER_APP" ]; then
+    open -a "$BROWSER_APP" "chrome://extensions" 2>/dev/null || \
+    echo "  Open chrome://extensions manually in your browser"
+else
+    echo -e "  ${YELLOW}⚠${NC}  Could not detect a Chromium browser as default."
+    echo "  Open chrome://extensions manually in Chrome, Arc, Brave, or Edge."
+fi
 
 # ─── Done ────────────────────────────────────
 echo ""

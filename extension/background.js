@@ -1,5 +1,19 @@
 const WEBHOOK_URL = "http://localhost:5581/forward";
 
+// Auto-reload Gmail/Slack tabs on install so content scripts inject immediately
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.tabs.query({}, (tabs) => {
+    for (const tab of tabs) {
+      if (
+        tab.url?.includes("mail.google.com") ||
+        tab.url?.includes("app.slack.com")
+      ) {
+        chrome.tabs.reload(tab.id);
+      }
+    }
+  });
+});
+
 // Handle forward trigger from either chrome.commands or content script message
 async function handleForward() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

@@ -1,9 +1,7 @@
 const WEBHOOK_URL = "http://localhost:5581/forward";
 
-// Listen for keyboard shortcut (Cmd+Shift+F)
-chrome.commands.onCommand.addListener(async (command) => {
-  if (command !== "forward-to-claude") return;
-
+// Handle forward trigger from either chrome.commands or content script message
+async function handleForward() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) return;
 
@@ -51,6 +49,16 @@ chrome.commands.onCommand.addListener(async (command) => {
     console.error("Content script injection failed:", err);
     showPopup(tab.id, source, url, null);
   }
+}
+
+// Listen from chrome.commands (if user sets shortcut manually)
+chrome.commands.onCommand.addListener((command) => {
+  if (command === "forward-to-claude") handleForward();
+});
+
+// Listen from content script (works immediately, no shortcut setup needed)
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.action === "forward-to-claude") handleForward();
 });
 
 function showPopup(tabId, source, url, extracted) {

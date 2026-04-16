@@ -16,6 +16,13 @@
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*", "https://app.slack.com/*"],
+      "js": ["shortcut-listener.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "commands": {
     "forward-to-claude": {
       "suggested_key": {

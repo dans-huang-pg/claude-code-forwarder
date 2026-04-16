@@ -65,7 +65,12 @@ async function handleForward() {
   }
 }
 
-// Listen from content script (Cmd+Shift+F on Gmail/Slack pages)
+// Listen from chrome.commands (shortcut set in chrome://extensions/shortcuts)
+chrome.commands.onCommand.addListener((command) => {
+  if (command === "forward-to-claude") handleForward();
+});
+
+// Listen from content script (backup — catches shortcut directly on the page)
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === "forward-to-claude") {
     handleForward();

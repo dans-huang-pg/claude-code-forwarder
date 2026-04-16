@@ -55,6 +55,12 @@ else
     echo -e "${GREEN}✓${NC} Claude Island"
 fi
 
+# Launch Claude Island if not running
+if ! pgrep -f "Claude Island" &>/dev/null; then
+    open -a "Claude Island"
+    echo -e "${GREEN}✓${NC} Claude Island launched"
+fi
+
 # ─── Install Flask ───────────────────────────
 if ! python3 -c "import flask" &>/dev/null; then
     echo -e "${YELLOW}Installing Flask...${NC}"

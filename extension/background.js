@@ -51,25 +51,41 @@ async function handleForward() {
   }
 }
 
-// Listen from chrome.commands (if user sets shortcut manually)
+// Listen from chrome.commands (if user sets shortcut manually or sets to Global)
 chrome.commands.onCommand.addListener((command) => {
   if (command === "forward-to-claude") handleForward();
 });
 
-// Listen from content script (works immediately, no shortcut setup needed)
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.action === "forward-to-claude") handleForward();
+// Listen from content script (works immediately on Gmail/Slack pages)
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === "forward-to-claude") {
+    handleForward();
+    return;
+  }
+
+  // Relay webhook calls from popup (avoids CORS issues in page context)
+  if (msg.action === "send-to-webhook") {
+    fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(msg.payload),
+    })
+      .then((r) => r.json())
+      .then((data) => sendResponse({ ok: true, data }))
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true; // keep sendResponse channel open for async
+  }
 });
 
 function showPopup(tabId, source, url, extracted) {
   chrome.scripting.executeScript({
     target: { tabId },
     func: injectInstructionPopup,
-    args: [source, url, extracted, WEBHOOK_URL],
+    args: [source, url, extracted],
   });
 }
 
-function injectInstructionPopup(source, url, extracted, webhookUrl) {
+function injectInstructionPopup(source, url, extracted) {
   // Remove existing popup if any
   const existing = document.getElementById("claude-forwarder-popup");
   if (existing) existing.remove();
@@ -117,6 +133,13 @@ function injectInstructionPopup(source, url, extracted, webhookUrl) {
         font-family: inherit; color: #333; background: white;
       }
       textarea::placeholder { color: #999; }
+      .hints {
+        display: flex; gap: 12px; margin-top: 6px; font-size: 11px; color: #999;
+      }
+      .hints kbd {
+        background: #f0f0f0; border: 1px solid #ddd; border-radius: 3px;
+        padding: 1px 4px; font-family: inherit; font-size: 10px;
+      }
       .buttons { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
       .btn-cancel {
         padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px;
@@ -140,7 +163,12 @@ function injectInstructionPopup(source, url, extracted, webhookUrl) {
           Source: <strong>${source}</strong> &middot; ${statusText}
         </div>
         ${extracted?.subject ? `<div class="subject">${extracted.subject}</div>` : ""}
-        <textarea id="instruction" placeholder="Optional instruction (e.g. 幫我 draft reply, summarize, research this...)"></textarea>
+        <textarea id="instruction" placeholder="Add instruction (e.g. draft reply, summarize, research this...)"></textarea>
+        <div class="hints">
+          <span><kbd>Enter</kbd> send</span>
+          <span><kbd>Shift+Enter</kbd> new line</span>
+          <span><kbd>Esc</kbd> cancel</span>
+        </div>
         <div class="buttons">
           <button class="btn-cancel" id="cancel">Cancel</button>
           <button class="btn-send" id="send">Send</button>
@@ -158,57 +186,67 @@ function injectInstructionPopup(source, url, extracted, webhookUrl) {
   const statusEl = shadow.getElementById("status");
   const textarea = shadow.getElementById("instruction");
 
+  function closePopup() {
+    host.remove();
+  }
+
   overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) host.remove();
+    if (e.target === overlay) closePopup();
   });
 
-  cancelBtn.addEventListener("click", () => host.remove());
-
-  document.addEventListener("keydown", function escHandler(e) {
-    if (e.key === "Escape") {
-      host.remove();
-      document.removeEventListener("keydown", escHandler);
-    }
-  });
+  cancelBtn.addEventListener("click", closePopup);
 
   // Force focus into shadow DOM textarea — Slack aggressively reclaims focus
   textarea.focus();
   setTimeout(() => textarea.focus(), 50);
   setTimeout(() => textarea.focus(), 200);
 
-  // Block all keyboard events from reaching the host page while popup is open
-  function trapKeyboard(e) {
-    e.stopPropagation();
-  }
-  host.addEventListener("keydown", trapKeyboard, true);
-  host.addEventListener("keyup", trapKeyboard, true);
-  host.addEventListener("keypress", trapKeyboard, true);
-
-  // Also intercept at document level to prevent Slack from stealing keys
-  function blockSlackKeys(e) {
+  // Intercept ALL keyboard events at document level (capture phase)
+  // This prevents Slack/Gmail from stealing keystrokes while popup is open
+  // AND handles our popup keyboard shortcuts (Enter, Escape) directly
+  function handleKeydown(e) {
     if (!document.getElementById("claude-forwarder-popup")) return;
+
     if (e.key === "Escape") {
-      host.remove();
+      closePopup();
+      e.preventDefault();
+      e.stopPropagation();
       return;
     }
+
+    // Enter = send (Shift+Enter = newline, let it through)
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      sendBtn.click();
+      return;
+    }
+
+    // Block everything else from reaching the host page
     e.stopPropagation();
   }
-  document.addEventListener("keydown", blockSlackKeys, true);
-  document.addEventListener("keyup", blockSlackKeys, true);
-  document.addEventListener("keypress", blockSlackKeys, true);
+
+  function blockPropagation(e) {
+    if (!document.getElementById("claude-forwarder-popup")) return;
+    e.stopPropagation();
+  }
+
+  document.addEventListener("keydown", handleKeydown, true);
+  document.addEventListener("keyup", blockPropagation, true);
+  document.addEventListener("keypress", blockPropagation, true);
 
   // Clean up event listeners when popup is removed
   const observer = new MutationObserver(() => {
     if (!document.getElementById("claude-forwarder-popup")) {
-      document.removeEventListener("keydown", blockSlackKeys, true);
-      document.removeEventListener("keyup", blockSlackKeys, true);
-      document.removeEventListener("keypress", blockSlackKeys, true);
+      document.removeEventListener("keydown", handleKeydown, true);
+      document.removeEventListener("keyup", blockPropagation, true);
+      document.removeEventListener("keypress", blockPropagation, true);
       observer.disconnect();
     }
   });
   observer.observe(document.body, { childList: true });
 
-  sendBtn.addEventListener("click", async () => {
+  async function sendToWebhook() {
     const instruction = textarea.value.trim();
 
     sendBtn.disabled = true;
@@ -233,20 +271,20 @@ function injectInstructionPopup(source, url, extracted, webhookUrl) {
     }
 
     try {
-      const resp = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      // Relay through background script to avoid CORS issues
+      const resp = await chrome.runtime.sendMessage({
+        action: "send-to-webhook",
+        payload,
       });
-      const data = await resp.json();
 
-      if (data.ok) {
+      if (resp?.ok && resp?.data?.ok) {
         statusEl.style.color = "#16a34a";
-        statusEl.textContent = `Sent! Session: ${data.session_name}`;
-        setTimeout(() => host.remove(), 1500);
+        statusEl.textContent = `Sent! Session: ${resp.data.session_name}`;
+        setTimeout(closePopup, 1500);
       } else {
+        const errMsg = resp?.data?.error || resp?.error || "Unknown error";
         statusEl.style.color = "#dc2626";
-        statusEl.textContent = `Error: ${data.error}`;
+        statusEl.textContent = `Error: ${errMsg}`;
         sendBtn.disabled = false;
         sendBtn.textContent = "Send";
       }
@@ -256,12 +294,7 @@ function injectInstructionPopup(source, url, extracted, webhookUrl) {
       sendBtn.disabled = false;
       sendBtn.textContent = "Send";
     }
-  });
+  }
 
-  textarea.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendBtn.click();
-    }
-  });
+  sendBtn.addEventListener("click", sendToWebhook);
 }

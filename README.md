@@ -7,9 +7,9 @@ Forward Gmail and Slack threads to Claude Code with a keyboard shortcut. Claude 
 ## How It Works
 
 ```
-Gmail / Slack (Chrome)
+Gmail / Slack (browser)
   → Cmd+Shift+F
-  → Popup: add optional instruction → Send
+  → Popup: add optional instruction → Enter to send
   → Local webhook receives content
   → Spawns Claude Code in tmux
   → Claude Island picks up the session
@@ -26,26 +26,39 @@ No terminal switching. No copy-pasting. One shortcut to delegate.
 - **Chrome, Arc, or Chromium-based browser**
 - **Slack in browser** (app.slack.com) — the standalone Slack desktop app won't work since Chrome extensions can't inject into it. Use Slack in your browser instead.
 
-The setup script installs everything else automatically.
+The setup script installs everything else automatically (tmux, Claude Island, Flask, webhook service).
 
 ## Setup
 
+### Step 1: Run the installer
+
 ```bash
-git clone https://github.com/user/claude-code-forwarder.git
+git clone https://github.com/dans-huang-pg/claude-code-forwarder.git
 cd claude-code-forwarder
 ./setup.sh
 ```
 
-The setup script will:
-1. Install [tmux](https://github.com/tmux/tmux), [Claude Island](https://github.com/farouqaldori/claude-island), and Flask (via Homebrew/pip)
-2. Start the webhook as a background service that auto-launches on login
-3. Open `chrome://extensions` for you to load the extension
+This automatically installs tmux, Claude Island, Flask, and starts the webhook as a background service that auto-launches on login.
 
-**One manual step:** In Chrome extensions page, enable Developer mode, click "Load unpacked", and select the `extension/` folder from this repo.
+### Step 2: Load the Chrome extension
+
+1. Go to `chrome://extensions`
+2. Enable **Developer mode** (top-right toggle)
+3. Click **Load unpacked**
+4. Select the `extension/` folder from this repo
+
+### Step 3: Set the keyboard shortcut to Global
+
+This step is required — the shortcut won't work without it.
+
+1. Go to `chrome://extensions/shortcuts`
+2. Find **Claude Code Forwarder**
+3. Click the pencil icon and press **Cmd+Shift+F** (or your preferred shortcut)
+4. Change the dropdown from "In Chrome" to **Global**
+
+That's it. Open Gmail or Slack and press **Cmd+Shift+F** to try it out.
 
 ## Usage
-
-Open Gmail or Slack in your browser, then:
 
 | Action | What happens |
 |--------|-------------|
@@ -55,7 +68,13 @@ Open Gmail or Slack in your browser, then:
 | **Hover** a Gmail inbox row + **Cmd+Shift+F** | Grabs that email without opening it |
 | **Select text** + **Cmd+Shift+F** | Sends only the selected text |
 
-A popup appears where you can add an optional instruction (e.g., "draft a reply", "summarize", "research this"). Press **Enter** to send, **Esc** to cancel.
+A popup appears where you can add an optional instruction (e.g., "draft a reply", "summarize", "research this").
+
+| Key | Action |
+|-----|--------|
+| **Enter** | Send to Claude Code |
+| **Shift+Enter** | New line |
+| **Esc** | Cancel |
 
 The session appears in Claude Island. Claude Code runs with full access to your tools and skills.
 
@@ -115,9 +134,9 @@ Without these, Claude Code can still read the forwarded content and give you adv
 
 ## Configuration
 
-**Webhook port:** Default `5581`. Set `PORT` env variable to change.
+**Webhook port:** Default `5581`. Change with `PORT` env variable.
 
-**Keyboard shortcut:** Default `Cmd+Shift+F` (Mac) / `Ctrl+Shift+F` (other). Change in `chrome://extensions/shortcuts`.
+**Keyboard shortcut:** Default `Cmd+Shift+F` (Mac) / `Ctrl+Shift+F` (other). Change in `chrome://extensions/shortcuts`. Must be set to **Global** scope.
 
 **Webhook service:**
 ```bash
@@ -131,7 +150,26 @@ launchctl load ~/Library/LaunchAgents/com.claude-code-forwarder.webhook.plist
 tail -f /tmp/claude-forwarder-webhook.log
 ```
 
+## Uninstall
+
+```bash
+# Stop and remove webhook service
+launchctl unload ~/Library/LaunchAgents/com.claude-code-forwarder.webhook.plist
+rm ~/Library/LaunchAgents/com.claude-code-forwarder.webhook.plist
+
+# Remove Claude Island
+brew uninstall --cask claude-island
+
+# Remove the repo
+rm -rf ~/claude-code-forwarder  # or wherever you cloned it
+
+# Remove the Chrome extension manually in chrome://extensions
+```
+
 ## Troubleshooting
+
+**Shortcut doesn't work**
+Make sure the shortcut is set to **Global** in `chrome://extensions/shortcuts`. "In Chrome" / "In Arc" scope may not work reliably.
 
 **Popup says "Connection failed"**
 The webhook isn't running. Check `curl http://localhost:5581/status` or restart the service.

@@ -89,6 +89,11 @@ cat > "$PLIST_PATH" << PLIST
         <string>$(command -v python3)</string>
         <string>${WEBHOOK_DIR}/claude_forwarder_webhook.py</string>
     </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>${PATH}</string>
+    </dict>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>

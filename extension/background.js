@@ -65,12 +65,7 @@ async function handleForward() {
   }
 }
 
-// Listen from chrome.commands (if user sets shortcut manually or sets to Global)
-chrome.commands.onCommand.addListener((command) => {
-  if (command === "forward-to-claude") handleForward();
-});
-
-// Listen from content script (works immediately on Gmail/Slack pages)
+// Listen from content script (Cmd+Shift+F on Gmail/Slack pages)
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === "forward-to-claude") {
     handleForward();
@@ -84,8 +79,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(msg.payload),
     })
-      .then((r) => r.json())
-      .then((data) => sendResponse({ ok: true, data }))
+      .then(async (r) => {
+        const text = await r.text();
+        try {
+          const data = JSON.parse(text);
+          sendResponse({ ok: true, data });
+        } catch {
+          sendResponse({ ok: false, error: `Webhook returned non-JSON (HTTP ${r.status}). Is it running?` });
+        }
+      })
       .catch((err) => sendResponse({ ok: false, error: err.message }));
     return true; // keep sendResponse channel open for async
   }

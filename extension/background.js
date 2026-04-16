@@ -65,6 +65,9 @@ async function handleForward() {
   }
 }
 
+// Click extension icon to forward
+chrome.action.onClicked.addListener(() => handleForward());
+
 // Listen from chrome.commands (shortcut set in chrome://extensions/shortcuts)
 chrome.commands.onCommand.addListener((command) => {
   if (command === "forward-to-claude") handleForward();

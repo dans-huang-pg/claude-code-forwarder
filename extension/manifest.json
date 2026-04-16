@@ -5,9 +5,17 @@
   "description": "Cmd+Shift+F to forward Gmail/Slack threads to Claude Code",
   "permissions": [
     "activeTab",
+    "tabs",
     "scripting",
     "storage"
   ],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    },
+    "default_title": "Forward to Claude Code"
+  },
   "host_permissions": [
     "https://mail.google.com/*",
     "https://app.slack.com/*",

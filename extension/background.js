@@ -109,6 +109,13 @@ function injectInstructionPopup(source, url, extracted, webhookUrl) {
         font-family: inherit; color: #333; background: white;
       }
       textarea::placeholder { color: #999; }
+      .hints {
+        display: flex; gap: 12px; margin-top: 6px; font-size: 11px; color: #999;
+      }
+      .hints kbd {
+        background: #f0f0f0; border: 1px solid #ddd; border-radius: 3px;
+        padding: 1px 4px; font-family: inherit; font-size: 10px;
+      }
       .buttons { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
       .btn-cancel {
         padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px;
@@ -132,7 +139,12 @@ function injectInstructionPopup(source, url, extracted, webhookUrl) {
           Source: <strong>${source}</strong> &middot; ${statusText}
         </div>
         ${extracted?.subject ? `<div class="subject">${extracted.subject}</div>` : ""}
-        <textarea id="instruction" placeholder="Optional instruction (e.g. 幫我 draft reply, summarize, research this...)"></textarea>
+        <textarea id="instruction" placeholder="Add instruction (e.g. draft reply, summarize, research this...)"></textarea>
+        <div class="hints">
+          <span><kbd>Enter</kbd> send</span>
+          <span><kbd>Shift+Enter</kbd> new line</span>
+          <span><kbd>Esc</kbd> cancel</span>
+        </div>
         <div class="buttons">
           <button class="btn-cancel" id="cancel">Cancel</button>
           <button class="btn-send" id="send">Send</button>
@@ -181,6 +193,15 @@ function injectInstructionPopup(source, url, extracted, webhookUrl) {
     if (!document.getElementById("claude-forwarder-popup")) return;
     if (e.key === "Escape") {
       host.remove();
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    // Enter = send (Shift+Enter = newline)
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      shadow.getElementById("send")?.click();
       return;
     }
     e.stopPropagation();

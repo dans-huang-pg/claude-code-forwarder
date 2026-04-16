@@ -138,18 +138,18 @@ def launch_in_tmux(session_name, prompt):
 cd {WORKSPACE_DIR}
 claude --name "{session_name}" --dangerously-skip-permissions "$(cat '{prompt_path}')"
 rm -f '{prompt_path}' '{launcher_fd.name}'
-# Kill the tmux session when claude exits so it doesn't show as idle
-tmux kill-session -t "{session_name}" 2>/dev/null
 """)
     launcher_fd.close()
     launcher_path = launcher_fd.name
     os.chmod(launcher_path, stat.S_IRWXU)
 
     # Launch in a new tmux session
+    # set-option destroy-unattached so tmux auto-kills when claude exits
     process = subprocess.Popen(
         [
             "tmux", "new-session", "-d",
             "-s", session_name,
+            "-e", "TERM=xterm-256color",
             launcher_path,
         ],
         stdout=subprocess.PIPE,

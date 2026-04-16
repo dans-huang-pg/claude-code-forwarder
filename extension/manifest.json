@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Claude Code Forwarder",
+  "version": "1.2.0",
+  "description": "Cmd+Shift+F to forward Gmail/Slack threads to Claude Code",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://app.slack.com/*",
+    "http://localhost:5581/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "forward-to-claude": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+F",
+        "mac": "Command+Shift+F"
+      },
+      "description": "Forward current thread to Claude Code"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

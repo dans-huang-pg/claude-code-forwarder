@@ -2,6 +2,8 @@
 
 Forward Gmail and Slack threads to Claude Code with a keyboard shortcut. Claude Code processes the content autonomously — researching, drafting replies, and saving drafts — while you monitor and interact through Claude Island.
 
+![Demo](demo.gif)
+
 ## How It Works
 
 ```

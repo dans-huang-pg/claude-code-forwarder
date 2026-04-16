@@ -22,6 +22,7 @@ No terminal switching. No copy-pasting. One shortcut to delegate.
 - **macOS** (launchd + Claude Island are macOS only)
 - **Claude Code CLI** — [install guide](https://docs.anthropic.com/en/docs/claude-code)
 - **Chrome, Arc, or Chromium-based browser**
+- **Slack in browser** (app.slack.com) — the standalone Slack desktop app won't work since Chrome extensions can't inject into it. Use Slack in your browser instead.
 
 The setup script installs everything else automatically.
 

@@ -120,14 +120,19 @@ fi
 
 # ─── Chrome Extension ────────────────────────
 echo ""
-echo -e "${BOLD}Last step: Load the Chrome extension${NC}"
+echo -e "${BOLD}Two manual steps to finish:${NC}"
 echo ""
+echo -e "  ${BOLD}Step 1: Load the extension${NC}"
 echo "  1. Opening chrome://extensions for you..."
 echo -e "  2. Enable ${BOLD}Developer mode${NC} (top-right toggle)"
 echo -e "  3. Click ${BOLD}Load unpacked${NC}"
 echo "  4. Select: ${SCRIPT_DIR}/extension"
 echo ""
-echo "  Open Gmail/Slack tabs will auto-reload to activate the shortcut."
+echo -e "  ${BOLD}Step 2: Set the keyboard shortcut${NC}"
+echo "  1. Go to chrome://extensions/shortcuts"
+echo -e "  2. Find ${BOLD}Claude Code Forwarder${NC} → click the pencil icon"
+echo -e "  3. Press ${BOLD}Cmd+Shift+F${NC} (or your preferred shortcut)"
+echo -e "  4. Change the dropdown to ${BOLD}Global${NC}"
 echo ""
 
 # Open extensions page in default browser (must be Chromium-based)

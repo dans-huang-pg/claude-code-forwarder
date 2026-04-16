@@ -80,7 +80,7 @@ cat > "$PLIST_PATH" << PLIST
     <string>${PLIST_NAME}</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/python3</string>
+        <string>$(command -v python3)</string>
         <string>${WEBHOOK_DIR}/claude_forwarder_webhook.py</string>
     </array>
     <key>RunAtLoad</key>
